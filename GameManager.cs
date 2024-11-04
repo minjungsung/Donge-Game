@@ -11,6 +11,14 @@ public class GameManager : MonoBehaviour
     public Transform effectGroup;
 
     public int maxLevel;
+    public int score;
+    public bool isGameOver;
+
+    public AudioSource bgmPlayer;
+    public AudioSource[] sfxPlayer;
+    public AudioClip[] sfxClip;
+    public enum Sfx { LevelUp, Next, Attach, Button, GameOver };
+    int sfxCursor;
 
     void Awake()
     {
@@ -19,17 +27,22 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        bgmPlayer.Play();
         NextDongle();
     }
 
     void NextDongle()
     {
+        if (isGameOver)
+            return;
+
         Dongle newDongle = GetDongle();
         lastDongle = newDongle;
         lastDongle.manager = this;
         lastDongle.level = Random.Range(0, maxLevel);
         lastDongle.gameObject.SetActive(true);
 
+        SfxPlay(Sfx.Next);
         StartCoroutine(WaitNext());
     }
 
@@ -74,5 +87,58 @@ public class GameManager : MonoBehaviour
 
         lastDongle.Drop();
         lastDongle = null;
+    }
+
+    public void GameOver()
+    {
+        if (isGameOver)
+            return;
+
+        isGameOver = true;
+        StartCoroutine(GameOverRoutine());
+    }
+
+    IEnumerator GameOverRoutine()
+    {
+        Dongle[] dongles = FindObjectsOfType<Dongle>();
+
+        for (int i = 0; i < dongles.Length; i++)
+        {
+            dongles[i].rigid.simulated = false;
+        }
+
+
+        for (int i = 0; i < dongles.Length; i++)
+        {
+            dongles[i].Hide(Vector3.up * 1000);
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        yield return new WaitForSeconds(1.0f);
+        SfxPlay(Sfx.GameOver);
+    }
+
+    public void SfxPlay(Sfx type)
+    {
+        switch (type)
+        {
+            case Sfx.LevelUp:
+                sfxPlayer[sfxCursor].clip = sfxClip[Random.Range(0, 3)];
+                break;
+            case Sfx.Next:
+                sfxPlayer[sfxCursor].clip = sfxClip[3];
+                break;
+            case Sfx.Attach:
+                sfxPlayer[sfxCursor].clip = sfxClip[4];
+                break;
+            case Sfx.Button:
+                sfxPlayer[sfxCursor].clip = sfxClip[5];
+                break;
+            case Sfx.GameOver:
+                sfxPlayer[sfxCursor].clip = sfxClip[6];
+                break;
+        }
+        sfxPlayer[sfxCursor].Play();
+        sfxCursor = (sfxCursor + 1) % sfxPlayer.Length;
     }
 }
