@@ -1,10 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
+    [Header("---------- [Core]")]
 
+    public bool isGameOver;
+    public int score;
+    public int maxLevel;
+
+    [Header("---------- [Object Pooling]")]
     public GameObject donglePrefab;
     public Transform dongleGroup;
     public List<Dongle> donglePool;
@@ -19,15 +26,38 @@ public class GameManager : MonoBehaviour
     public Dongle lastDongle;
 
 
-    public int maxLevel;
-    public int score;
-    public bool isGameOver;
-
+    [Header("---------- [Audio]")]
     public AudioSource bgmPlayer;
     public AudioSource[] sfxPlayer;
     public AudioClip[] sfxClip;
     public enum Sfx { LevelUp, Next, Attach, Button, GameOver };
     int sfxCursor;
+
+    [Header("---------- [UI]")]
+    public GameObject startGroup;
+    public GameObject endGroup;
+    public Text scoreText;
+    public Text maxScoreText;
+    public Text subTextScore;
+
+    [Header("---------- [ETC]")]
+    public GameObject line;
+    public GameObject bottom;
+
+    public void GameStart()
+    {
+        line.SetActive(true);
+        bottom.SetActive(true);
+
+        scoreText.gameObject.SetActive(true);
+        maxScoreText.gameObject.SetActive(true);
+        startGroup.SetActive(false);
+
+        bgmPlayer.Play();
+        SfxPlay(Sfx.Button);
+        Invoke("NextDongle", 1.5f);
+
+    }
 
     void Awake()
     {
@@ -38,12 +68,12 @@ public class GameManager : MonoBehaviour
         {
             MakeDongle();
         }
-    }
 
-    void Start()
-    {
-        bgmPlayer.Play();
-        NextDongle();
+        if (!PlayerPrefs.HasKey("MaxScore"))
+        {
+            PlayerPrefs.SetInt("MaxScore", 0);
+        }
+        maxScoreText.text = PlayerPrefs.GetInt("MaxScore").ToString();
     }
 
     void NextDongle()
@@ -142,7 +172,30 @@ public class GameManager : MonoBehaviour
         }
 
         yield return new WaitForSeconds(1.0f);
+
+        if (score > PlayerPrefs.GetInt("MaxScore"))
+        {
+            PlayerPrefs.SetInt("MaxScore", score);
+            maxScoreText.text = score.ToString();
+        }
+
+        endGroup.SetActive(true);
+        subTextScore.text = "점수: " + score.ToString();
+
+        bgmPlayer.Stop();
         SfxPlay(Sfx.GameOver);
+    }
+
+    public void Reset()
+    {
+        SfxPlay(Sfx.Button);
+        StartCoroutine(ResetCoroutine());
+    }
+
+    IEnumerator ResetCoroutine()
+    {
+        yield return new WaitForSeconds(1f);
+        SceneManager.LoadScene("Main");
     }
 
     public void SfxPlay(Sfx type)
@@ -167,5 +220,16 @@ public class GameManager : MonoBehaviour
         }
         sfxPlayer[sfxCursor].Play();
         sfxCursor = (sfxCursor + 1) % sfxPlayer.Length;
+    }
+
+    void Update()
+    {
+        if (Input.GetButtonDown("Cancel"))
+            Application.Quit();
+    }
+
+    void LateUpdate()
+    {
+        scoreText.text = score.ToString();
     }
 }
