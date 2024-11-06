@@ -4,11 +4,20 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    public Dongle lastDongle;
+
     public GameObject donglePrefab;
     public Transform dongleGroup;
+    public List<Dongle> donglePool;
     public GameObject effectPrefab;
     public Transform effectGroup;
+    public List<ParticleSystem> effectPool;
+
+    [Range(1, 30)]
+
+    public int poolSize;
+    public int poolCursor;
+    public Dongle lastDongle;
+
 
     public int maxLevel;
     public int score;
@@ -23,6 +32,12 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Application.targetFrameRate = 60;
+        donglePool = new List<Dongle>();
+        effectPool = new List<ParticleSystem>();
+        for (int i = 0; i < poolSize; i++)
+        {
+            MakeDongle();
+        }
     }
 
     void Start()
@@ -36,9 +51,7 @@ public class GameManager : MonoBehaviour
         if (isGameOver)
             return;
 
-        Dongle newDongle = GetDongle();
-        lastDongle = newDongle;
-        lastDongle.manager = this;
+        lastDongle = GetDongle();
         lastDongle.level = Random.Range(0, maxLevel);
         lastDongle.gameObject.SetActive(true);
 
@@ -56,19 +69,33 @@ public class GameManager : MonoBehaviour
         NextDongle();
     }
 
-    Dongle GetDongle()
+    Dongle MakeDongle()
     {
-        // 이펙트 생성
         GameObject instantEffectObj = Instantiate(effectPrefab, effectGroup);
+        instantEffectObj.name = "Effect" + effectPool.Count;
         ParticleSystem instantEffect = instantEffectObj.GetComponent<ParticleSystem>();
+        effectPool.Add(instantEffect);
 
         // 동글 생성
         GameObject instantDongleObj = Instantiate(donglePrefab, dongleGroup);
+        instantDongleObj.name = "Dongle" + donglePool.Count;
         Dongle instantDongle = instantDongleObj.GetComponent<Dongle>();
-
+        instantDongle.manager = this;
         instantDongle.effect = instantEffect;
-        return instantDongle;
+        donglePool.Add(instantDongle);
 
+        return instantDongle;
+    }
+
+    Dongle GetDongle()
+    {
+        for (int i = 0; i < donglePool.Count; i++)
+        {
+            poolCursor = (poolCursor + 1) % donglePool.Count;
+            if (donglePool[poolCursor].gameObject.activeSelf == false)
+                return donglePool[poolCursor];
+        }
+        return MakeDongle();
     }
 
     public void TouchDown()
